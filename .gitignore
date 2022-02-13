@@ -50,3 +50,4 @@ dist
 .env*
 **/lib
 .pypirc
+application/frontend/build

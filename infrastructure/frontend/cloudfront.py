@@ -1,5 +1,32 @@
 import pulumi
 import pulumi_aws as aws
+import json
+from pulumi import Output
+
+
+def public_read_policy_for_bucket(values):
+    print(values)
+    return json.dumps(
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": values[1]},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [
+                        f"arn:aws:s3:::{values[0]}/*",
+                    ],
+                }
+            ],
+        }
+    )
+
+
+origin_access_identity = aws.cloudfront.OriginAccessIdentity(
+    f"bike-rent-front-access-identity",
+    comment=f"bike-rent-front-access-identity",
+)
 
 bucket = aws.s3.Bucket(
     "bike-rent-web-content",
@@ -9,12 +36,16 @@ bucket = aws.s3.Bucket(
         "index_document": "index.html",
     })
 
+root_bucket_policy = aws.s3.BucketPolicy(
+    f"bike-rent-bucket",
+    bucket=bucket.id,
+    policy=Output.all(bucket.id, origin_access_identity.iam_arn).apply(
+        public_read_policy_for_bucket
+    ),
+)
+
 s3_origin_id = "bike-rent-front"
 
-origin_access_identity = aws.cloudfront.OriginAccessIdentity(
-    f"bike-rent-front-access-identity",
-    comment=f"bike-rent-front-access-identity",
-)
 
 s3_distribution = aws.cloudfront.Distribution(
     "s3Distribution",
