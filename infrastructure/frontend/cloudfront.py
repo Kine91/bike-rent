@@ -3,9 +3,9 @@ import pulumi_aws as aws
 import json
 from pulumi import Output
 
+ENV = pulumi.get_stack().split("-")[-1]
 
 def public_read_policy_for_bucket(values):
-    print(values)
     return json.dumps(
         {
             "Version": "2012-10-17",
@@ -24,20 +24,22 @@ def public_read_policy_for_bucket(values):
 
 
 origin_access_identity = aws.cloudfront.OriginAccessIdentity(
-    f"bike-rent-front-access-identity",
-    comment=f"bike-rent-front-access-identity",
+    f"bike-rent-front-access-identity-{ENV}",
+    comment=f"bike-rent-front-access-identity-{ENV}",
 )
 
 bucket = aws.s3.Bucket(
-    "bike-rent-web-content",
+    f"bike-rent-web-content-{ENV}",
     force_destroy=True,
     acl="private",
     website={
         "index_document": "index.html",
     })
 
+pulumi.export('front_bucket',  bucket.id)
+
 root_bucket_policy = aws.s3.BucketPolicy(
-    f"bike-rent-bucket",
+    f"bike-rent-bucket-policy-{ENV}",
     bucket=bucket.id,
     policy=Output.all(bucket.id, origin_access_identity.iam_arn).apply(
         public_read_policy_for_bucket
